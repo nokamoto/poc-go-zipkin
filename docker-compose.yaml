@@ -1,7 +1,13 @@
 version: '3'
 services:
+  zipkin:
+    image: openzipkin/zipkin:2.13
+    ports:
+      - 9411:9411
   server:
     build:
       context: ./
       dockerfile: ./Dockerfile
     image: nokamoto/poc-go-zipkin:latest
+    depends_on:
+      - zipkin

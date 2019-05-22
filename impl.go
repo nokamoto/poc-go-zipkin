@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	pb "github.com/nokamoto/poc-go-zipkin/service"
+	"go.opencensus.io/plugin/ocgrpc"
+	"go.opencensus.io/trace"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -18,6 +20,7 @@ type serviceA struct {
 func newServiceA() (*serviceA, error) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
 
 	conn, err := grpc.Dial(*addr, opts...)
 	if err != nil {
@@ -28,6 +31,9 @@ func newServiceA() (*serviceA, error) {
 }
 
 func (a *serviceA) Send(ctx context.Context, req *pb.Request) (*pb.Response, error) {
+	ctx, span := trace.StartSpan(ctx, "ServiceA.Send")
+	defer span.End()
+
 	res, err := a.cli.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -50,6 +56,9 @@ func (a *serviceA) Send(ctx context.Context, req *pb.Request) (*pb.Response, err
 type serviceB struct{}
 
 func (*serviceB) Send(ctx context.Context, _ *pb.Request) (*pb.Response, error) {
+	ctx, span := trace.StartSpan(ctx, "ServiceB.Send")
+	defer span.End()
+
 	milli := rand.Int63n(6000)
 	fmt.Printf("start: heavy workload B %d millis\n", milli)
 	time.Sleep(time.Duration(milli) * time.Millisecond)
